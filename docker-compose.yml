@@ -1,0 +1,48 @@
+version: '3.4'
+services:
+  dev_db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: private-kit-server_dev
+    ports:
+      - 5432
+    networks:
+      - default
+    volumes:
+      - ./db/migrations:/docker-entrypoint-initdb.d/ # Will copy all migrations and run then when the container is created
+  web:
+    build:
+      context: .
+      target: dev_builder
+    depends_on:
+      - dev_db
+    restart: on-failure:10 # Will restart until DB is ready
+    command:
+      - "/bin/sh"
+      - -ecx
+      - |
+        echo 'Compiling private-kit-server!'
+        CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/app ./cmd/app
+        echo 'Starting private-kit-server'
+        ./bin/app
+    ports:
+      - '1234:8080'
+      - '1235:8081'
+    volumes:
+      - .:/go/src/github.com/mrzacarias/private-kit-server
+    environment:
+      PKS_DB_HOST: dev_db
+      PKS_DB_DATABASE: private-kit-server_dev
+
+  migrate_db:
+    build:
+      context: .
+      target: dev_builder
+    volumes:
+      - .:/go/src/github.com/mrzacarias/private-kit-server
+    working_dir: /go/src/github.com/mrzacarias/private-kit-server
+
+volumes:
+  migrations:

@@ -1,0 +1,4 @@
+.DS_Store
+*.proto
+k8s/*/secrets.yaml
+bin
